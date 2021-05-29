@@ -75,6 +75,13 @@ IDE Options | Description
 Create VSCode Project | As well as the CMake files, also create the appropriate Visual Studio Code project files.
 Debugger | Use the specified debugger in the IDE
 
+WSL Setup
+-----|--------
+1. tkinter can be installed using following apt repo and hence the python code will execute generator well in terminal.
+$sudo apt-get install python3-tk
+2. In order to run the GUI we can leverage the X11 server running on windows host using vcxsrv.exe (which I am using) and set the remote client as your distro running in WSL, here is a great article.
+  https://medium.com/javarevisited/using-wsl-2-with-x-server-linux-on-windows-a372263533c3
+3. In order to launch the UI, set up X11 server as described in the article. To run the generator, rn GUI.sh
 
 
 
