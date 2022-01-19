@@ -12,7 +12,6 @@ import shutil
 from pathlib import Path
 import sys
 import subprocess
-from time import sleep
 import platform
 import shlex
 import csv
@@ -470,8 +469,8 @@ class ConfigurationWindow(tk.Toplevel):
             i+=1
 
         self.descriptionText.grid(row = 3, column=0, columnspan=4, sticky=tk.W + tk.E)
-        cancelButton.grid(column=4, row = 3, sticky=tk.E, padx=5)
-        okButton.grid(column=5, row = 3, padx=5)
+        cancelButton.grid(column=5, row = 3, padx=5)
+        okButton.grid(column=4, row = 3, sticky=tk.E, padx=5)
 
         # populate the list box with our config options
         for conf in configuration_dictionary:
@@ -600,7 +599,7 @@ class ProjectWindow(tk.Frame):
         mainFrame = tk.Frame(self, bg=GetBackground()).grid(row=0, column=0, columnspan=6, rowspan=12)
 
         # Need to keep a reference to the image or it will not appear.
-        self.logo = tk.PhotoImage(file=self._get_filepath("logo_alpha.gif"))
+        self.logo = tk.PhotoImage(file=GetFilePath("logo_alpha.gif"))
         logowidget = ttk.Label(mainFrame, image=self.logo, borderwidth=0, relief="solid").grid(row=0,column=0, columnspan=5, pady=10)
 
         namelbl = ttk.Label(mainFrame, text='Project Name :').grid(row=2, column=0, sticky=tk.E)
@@ -712,8 +711,9 @@ class ProjectWindow(tk.Frame):
 
         # OK, Cancel, Help section
         # creating buttons
-        QuitButton = ttk.Button(mainFrame, text="Quit", command=self.quit).grid(row=optionsRow, column=3, padx=4, pady=5, sticky=tk.E)
-        OKButton = ttk.Button(mainFrame, text="OK", command=self.OK).grid(row=optionsRow, column=4, stick=tk.E, padx=10, pady=5)
+        QuitButton = ttk.Button(mainFrame, text="Quit", command=self.quit).grid(row=optionsRow, column=4, stick=tk.E, padx=10, pady=5)
+        OKButton = ttk.Button(mainFrame, text="OK", command=self.OK).grid(row=optionsRow, column=3, padx=4, pady=5, sticky=tk.E)
+
         # TODO help not implemented yet
         # HelpButton = ttk.Button(mainFrame, text="Help", command=self.help).grid(row=optionsRow, column=0, pady=5)
 
@@ -764,9 +764,6 @@ class ProjectWindow(tk.Frame):
         # Run the configuration window
         self.configs = ConfigurationWindow(self, self.configs).get()
 
-    def _get_filepath(self, filename):
-        return os.path.join(os.path.dirname(__file__), filename)
-
 def CheckPrerequisites():
     global isMac, isWindows
     isMac = (platform.system() == 'Darwin')
@@ -795,11 +792,18 @@ def CheckSDKPath(gui):
 
     return sdkPath
 
+def GetFilePath(filename):
+    if os.path.islink(__file__):
+        script_file = os.readlink(__file__)
+    else:
+        script_file = __file__
+    return os.path.join(os.path.dirname(script_file), filename)
 
 def ParseCommandLine():
+    debugger_flags = ', '.join('{} = {}'.format(i, v) for i, v in enumerate(debugger_list))
     parser = argparse.ArgumentParser(description='Pico Project generator')
     parser.add_argument("name", nargs="?", help="Name of the project")
-    parser.add_argument("-t", "--tsv", help="Select an alternative pico_configs.tsv file", default="pico_configs.tsv")
+    parser.add_argument("-t", "--tsv", help="Select an alternative pico_configs.tsv file", default=GetFilePath("pico_configs.tsv"))
     parser.add_argument("-o", "--output", help="Set an alternative CMakeList.txt filename", default="CMakeLists.txt")
     parser.add_argument("-x", "--examples", action='store_true', help="Add example code for the Pico standard library")
     parser.add_argument("-l", "--list", action='store_true', help="List available features")
@@ -816,7 +820,7 @@ def ParseCommandLine():
     parser.add_argument("-cpp", "--cpp", action='store_true', default=0, help="Generate C++ code")
     parser.add_argument("-cpprtti", "--cpprtti", action='store_true', default=0, help="Enable C++ RTTI (Uses more memory)")
     parser.add_argument("-cppex", "--cppexceptions", action='store_true', default=0, help="Enable C++ exceptions (Uses more memory)")
-    parser.add_argument("-d", "--debugger", type=int, help="Select debugger (0 = SWD, 1 = PicoProbe)", default=0)
+    parser.add_argument("-d", "--debugger", type=int, help="Select debugger ({})".format(debugger_flags), default=0)
 
     return parser.parse_args()
 
@@ -889,7 +893,7 @@ def GenerateCMake(folder, params):
                  "cmake_minimum_required(VERSION 3.13)\n\n"
                  "set(CMAKE_C_STANDARD 11)\n"
                  "set(CMAKE_CXX_STANDARD 17)\n\n"
-                 "# initalize pico_sdk from installed location\n"
+                 "# Initialise pico_sdk from installed location\n"
                  "# (note this can come from environment, CMake cache etc)\n"
                 )
 
@@ -1176,7 +1180,7 @@ def DoEverything(parent, params):
 
     if isWindows:
         cmakeCmd = 'cmake -DCMAKE_BUILD_TYPE=Debug -G "NMake Makefiles" ..'
-        makeCmd = 'nmake -j ' + str(cpus)
+        makeCmd = 'nmake '
     else:
         cmakeCmd = 'cmake -DCMAKE_BUILD_TYPE=Debug ..'
         makeCmd = 'make -j' + str(cpus)
@@ -1207,8 +1211,7 @@ args = ParseCommandLine()
 if args.nouart:
     args.uart = False
 
-#  TODO this could be better, need some constants etc
-if args.debugger > 1:
+if args.debugger > len(debugger_list) - 1:
     args.debugger = 0
 
 # Check we have everything we need to compile etc
